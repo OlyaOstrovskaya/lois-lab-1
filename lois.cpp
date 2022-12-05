@@ -21,39 +21,40 @@ HMODULE GCM()
 	return h_module;
 }
 
-int len(string str)
+int length(string str)
 {
-	int length = 0;
+	int result = 0;
 	for (int i = 0; str[i] != '\0'; i++)
 	{
-		length++;
-
+		result++;
 	}
-	return length;
+	return result;
 }
 
-vector<string> split(string str, char seperator)
+vector<string> split_by_newline(string str)
 {
-	vector<string> strings;
-	int currIndex = 0, i = 0;
-	int startIndex = 0, endIndex = 0;
-	while (i <= len(str))
+	vector<string> result;
+	int i = 0;
+	int currentIndex = 0;
+	int startIndex = 0;
+	int endIndex = 0;
+	while (i <= length(str))
 	{
-		if (str[i] == seperator || i == len(str))
+		if (str[i] == '\n' || i == length(str))
 		{
 			endIndex = i;
-			string subStr = "";
-			subStr.append(str, startIndex, endIndex - startIndex);
-			if (subStr.size() > 0)
+			string substring = "";
+			substring.append(str, startIndex, endIndex - startIndex);
+			if (substring.size() > 0)
 			{
-				strings.push_back(subStr);
+				result.push_back(substring);
 			}
-			currIndex += 1;
+			currentIndex += 1;
 			startIndex = endIndex + 1;
 		}
 		i++;
 	}
-	return strings;
+	return result;
 }
 
 vector<string> parse_strings_from_file() {
@@ -63,71 +64,35 @@ vector<string> parse_strings_from_file() {
 	DWORD h_size = SizeofResource(GCM(), h_res);
 	char* h_final = (char*)LockResource(h_data);
 	result.assign(h_final, h_size);
-	return split(result, '\n');
+	return split_by_newline(result);
 }
 
-void enter_the_rule(set& set_x, set& set_y, fuzzy_sets sets) {
+void input_rule(set& set_x, set& set_y, fuzzy_sets sets) {
 	while (true)
 	{
 		try {
-			cout << "Enter the rule: ";
+			cout << "Input the rule: ";
 			string rule;
 			cin >> rule;
 
-			int impl_id = rule.find_first_of("~");
-			if (impl_id <= 0 || impl_id == rule.size() - 2)
+			int implication_id = rule.find_first_of("~");
+			if (implication_id <= 0 || implication_id == rule.size() - 2)
 			{
 				throw exception("");
 			}
-			string x = rule.substr(0, impl_id);
-			set_x = find_by_name(sets, x);
-			string y = rule.substr(impl_id + 2);
-			set_y = find_by_name(sets, y);
+			string x = rule.substr(0, implication_id);
+			set_x = find_set_by_name(sets, x);
+			string y = rule.substr(implication_id + 2);
+			set_y = find_set_by_name(sets, y);
 			break;
 		}
 		catch (const std::exception&) {
-			cout << "Wrong input X_x, try again" << endl;
+			cout << "Wrong input X_x, try again" << endl << endl;
 		}
-
 	}
 }
 
-void validation_for_user_input(float val) {
-	if (val < 0 || val > 1)
-	{
-		throw exception("");
-	}
-}
-
-arr enter_package2(impl_matrix matrix, set set_y) {
-	arr package;
-	cout << "enter degree of fuzzy [0,1]" << endl;
-	string inp_var = anti_element_of_arr(set_y.second);
-
-	size_t i = 0;
-	while (i < matrix.size())
-	{
-		try
-		{
-			string str_val;
-			string var = inp_var + to_string(i + 1);
-			cout << "for " << var << ": ";
-			cin >> str_val;
-			float val = stof(str_val);
-			validation_for_user_input(val);
-			package.push_back(make_pair(var, val));
-			i++;
-		}
-		catch (const std::exception&)
-		{
-			cout << "Invalid input, try again" << endl;
-		}
-	}
-
-	return package;
-}
-
-set enter_package(fuzzy_sets sets) {
+set input_package(fuzzy_sets sets) {
 	while (true)
 	{
 		try
@@ -135,61 +100,57 @@ set enter_package(fuzzy_sets sets) {
 			cout << "Choose a package: ";
 			string str_package;
 			cin >> str_package;
-			return find_by_name(sets, str_package);
+			cout << endl;
+			return find_set_by_name(sets, str_package);
 		}
 		catch (const std::exception&)
 		{
-			cout << "Cannot find package, ";
+			cout << "Cannot find package ";
 		}
 	}
 }
 
-
-void show_result(set set_x, set set_y, set package,  arr rez_arr) {
+void print_result(set set_x, set set_y, set package, arr result) {
 	string func = "(" + package.first + "/\\" + "(" + set_x.first + "~>" + set_y.first + "))";
-	cout << "Result of " + func + ": ";
+	cout << "Result of " + func + ": {";
 
-	for (size_t j = 0; j < rez_arr.size(); j++)
+	for (size_t i = 0; i < result.size(); i++)
 	{
-		if (j != 0)
+		if (i != 0)
 		{
-			cout << ",";
+			cout << ", ";
 		}
-		cout << "(" << rez_arr[j].first << ",";
-		cout << rez_arr[j].second << ")";
+		cout << "<" << result[i].first << ", ";
+		cout << fixed << setprecision(1) << result[i].second << ">";
 	}
+	cout << "}" << endl;
 }
 
 int main()
 {
 	try 
 	{
-		fuzzy_sets sets = parse_fuzzy_sets_from_file(parse_strings_from_file());
+		fuzzy_sets sets = parse_fuzzy_sets_from_strings(parse_strings_from_file());
 		while (true)
 		{
 			system("cls");
-			show_sets(sets);
-			set set_x, set_y;
-			enter_the_rule(set_x, set_y, sets);
+			print_sets(sets);
+			set set_x;
+			set set_y;
 
-			impl_matrix matrix = fill_implementation_matrix(set_x, set_y);
-			set package = enter_package(sets);
-			arr rez_arr = compute_direct_output(matrix, package.second);
-			show_impl_matrix(matrix);
-			show_result(set_x, set_y, package ,rez_arr);
+			input_rule(set_x, set_y, sets);
 
-			cout << endl << "Enter exit to exit or any symbol to continue" << endl;
+			impl_matrix matrix = build_implementation_matrix(set_x, set_y);
+			set package = input_package(sets);
+			arr result = calculate_direct_output(matrix, package.second);
+			print_implication_matrix(matrix);
+			print_result(set_x, set_y, package, result);
+
+			cout << endl << "Enter any symbol to continue" << endl;
 			string ex;
 			cin >> ex;
 			cin.ignore();
-			if (ex == "exit")
-			{
-				break;
-			}
-			else
-			{
-				continue;
-			}
+			continue;
 		}
 	}
 	catch (const std::exception&)

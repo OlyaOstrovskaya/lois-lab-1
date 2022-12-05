@@ -8,6 +8,7 @@
 "Нечеткий логический вывод в системе принятия решений" А. А. Ахрем, М. Р. Ашинянц. С. А. Петров */
 
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <vector>
 #include <utility>
@@ -21,98 +22,93 @@ using set = pair<string, arr>;
 using fuzzy_sets = vector<set>;
 using impl_matrix = vector<arr>;
 
-inline void valid_substring(string str) {
+inline void validate_substring(string str) {
 	if (str.empty() || str.find(')') != string::npos || str.find_last_of('(') != 0 || str.find_first_of(',') != str.find_last_of(','))
 	{
 		throw exception("");
 	}
 }
 
-inline void valid_arr_val(float arr_val) {
-	if (arr_val < 0 || arr_val > 1)
+inline void validate_array_value(float array_value) {
+	if (array_value < 0 || array_value > 1)
 	{
 		throw exception("");
 	}
 }
 
-
-inline arr parse_arr_out_of_string(string str) {
-	str = str.substr(str.find('=') + 2);
-	arr temp_arr;
+inline arr parse_array_out_of_string(string str) {
+	arr result;
 	while (!str.empty())
 	{
 		const size_t start = str.find_first_of('(');
 		const size_t end = str.find_first_of(')');
 		const size_t middle_comma = str.find_first_of(',');
 
-		string temp = str.substr(start, end);
-		valid_substring(temp);
-		string arr_var = temp.substr(start + 1, middle_comma - start - 1);
-		float arr_val = stof(temp.substr(middle_comma + 1, end - middle_comma));
-		valid_arr_val(arr_val);
-		pair<string, float> temp_pair = make_pair(arr_var, arr_val);
-		temp_arr.push_back(temp_pair);
+		string substring = str.substr(start, end);
+		validate_substring(substring);
+		string array_variable = substring.substr(start + 1, middle_comma - start - 1);
+		float array_value = stof(substring.substr(middle_comma + 1, end - middle_comma));
+		validate_array_value(array_value);
+		pair<string, float> pair = make_pair(array_variable, array_value);
+		result.push_back(pair);
 		str = str.substr(end + 2);
 	}
-	return temp_arr;
+	return result;
 }
 
 inline set parse_set_out_of_string(string str) {
-	const size_t i = str.find('=');
 	string set_name = str.substr(0, 1);
-	arr temp_arr = parse_arr_out_of_string(str);
-	set parsed_set(set_name, temp_arr);
-	return parsed_set;
+	arr array = parse_array_out_of_string(str.substr(str.find('=') + 2));
+	return set(set_name, array);
 }
 
-inline fuzzy_sets parse_fuzzy_sets_from_file(vector<string> strings) {
-	fuzzy_sets sets;
-
+inline fuzzy_sets parse_fuzzy_sets_from_strings(vector<string> strings) {
+	fuzzy_sets result;
 	for (size_t i = 0; i < strings.size(); i++)
 	{
-		set read_set = parse_set_out_of_string(strings[i]);
-		sets.push_back(read_set);
+		result.push_back(parse_set_out_of_string(strings[i]));
 	}
-	return sets;
+	return result;
 }
 
-inline set find_by_name(fuzzy_sets sets, string name) {
-	set rez;
+inline set find_set_by_name(fuzzy_sets sets, string name) {
+	set result;
 	for (size_t i = 0; i < sets.size(); i++)
 	{
 		if (sets[i].first == name)
 		{
-			rez = sets[i];
+			result = sets[i];
 			break;
 		}
 	}
-	if (rez.first.empty())
+	if (result.first.empty())
 	{
 		throw invalid_argument("");
 	}
-	return rez;
+	return result;
 }
 
-inline void show_sets(fuzzy_sets sets) {
+inline void print_sets(fuzzy_sets sets) {
 	for (int i = 0; i < sets.size(); i++)
 	{
-		cout << sets[i].first << "={";
+		cout << sets[i].first << " = {";
 		for (size_t j = 0; j < sets[i].second.size(); j++)
 		{
 			if (j != 0)
 			{
-				cout << ",";
+				cout << ", ";
 			}
-			cout << "(" << sets[i].second[j].first << ",";
-			cout << sets[i].second[j].second << ")";
+			cout << "<" << sets[i].second[j].first << ", ";
+			cout << fixed << setprecision(1) << sets[i].second[j].second << ">";
 		}
 		cout << "}" << endl;
 	}
+	cout << endl;
 }
 
-
 inline float lim(float n) {
-	double s = 0, q = 1;
+	double s = 0;
+	double q = 1;
 	for (int i = 1; i <= n; i++) {
 		q = q * 2;
 		s += (2 * i - 1) / q;
@@ -122,70 +118,82 @@ inline float lim(float n) {
 
 inline float implication(float x, float y) {
 	float z = rand();
-	float res = min((float) 1, (float) lim(exp(z * (log(y)))) + (float) y * exp(z * (log(x))));
-	return res;
+	return min((float)1, (float)lim(exp(z * (log(y)))) + (float)y * exp(z * (log(x))));
 }
 
-inline void show_impl_matrix(impl_matrix matrix) {
-	cout << "Implementation matrix predicate: " << endl;
+inline void print_implication_matrix(impl_matrix matrix) {
+	cout << "Implication matrix predicate: " << endl;
+	cout << "{";
 	for (size_t i = 0; i < matrix.size(); i++)
 	{
+		if (i != 0)
+		{
+			cout << " ";
+		}
 		for (size_t j = 0; j < matrix[i].size(); j++)
 		{
-			string var = matrix[i][j].first;
-			float val = matrix[i][j].second;
-			cout << var << ": " <<val << "\t";
+			string variable = matrix[i][j].first;
+			float value = matrix[i][j].second;
+			cout << "<<" << variable << ">, " << fixed << setprecision(1) << value << ">";
+			if (j != matrix[i].size() - 1)
+			{
+				cout << ",   ";
+			}
 		}
-		cout << endl;
+		if (i != matrix.size() - 1)
+		{
+			cout << endl;
+		}
 	}
+	cout << "}" << endl << endl;
 }
 
-inline float tnorm(float x, float y) {
+inline float t_norm(float x, float y) {
 	return min(x, y);
 }
 
-inline impl_matrix fill_implementation_matrix(set set_x, set set_y) {
-	impl_matrix matrix;
+inline impl_matrix build_implementation_matrix(set set_x, set set_y) {
+	impl_matrix result;
 	for (size_t i = 0; i < set_x.second.size(); i++)
 	{
-		arr temp_arr;
+		arr array;
 		float x = set_x.second[i].second;
 		for (size_t j = 0; j < set_y.second.size(); j++)
 		{
 			float y = set_y.second[j].second;
 			string vars = set_x.second[i].first + ", " + set_y.second[j].first;
-			temp_arr.push_back(make_pair(vars, implication(x, y)));
+			array.push_back(make_pair(vars, implication(x, y)));
 		}
-		matrix.push_back(temp_arr);
+		result.push_back(array);
 	}
-	return matrix;
+	return result;
 }
 
-inline string anti_element_of_arr(arr in_arr) {
-	string anti;
-	if (in_arr[0].first.find('x') == string::npos)
+inline string anti_element_of_array(arr array) {
+	string result;
+	if (array[0].first.find('x') == string::npos)
 	{
-		anti = "x";
+		result = "x";
 	}
 	else
 	{
-		anti = "y";
+		result = "y";
 	}
-	return anti;
+	return result;
 }
 
-inline arr compute_direct_output(impl_matrix matrix, arr package) {
-	arr rez_arr;
+inline arr calculate_direct_output(impl_matrix matrix, arr package) {
+	arr result;
 	for (size_t i = 0; i < matrix[0].size(); i++)
 	{
-		float val = 0;
+		float value = 0;
 		for (size_t j = 0; j < matrix.size(); j++)
 		{
 			float y = matrix[j][i].second;
-			val = max(val, tnorm(package[j].second, y));
+			value = max(value, t_norm(package[j].second, y));
 		}
-		string var = anti_element_of_arr(package) + to_string(i + 1);
-		rez_arr.push_back(make_pair(var, val));
+		string variable = anti_element_of_array(package) + to_string(i + 1);
+		result.push_back(make_pair(variable, value));
 	}
-	return rez_arr;
+	return result;
 }
